@@ -1,7 +1,0 @@
-covid.train.csv
-covid.test.csv
-pred.csv
-models/
-runs/
-.ipynb_checkpoints/
-__pycache__/

@@ -1,0 +1,20 @@
+# 系统/编辑器产生的垃圾文件
+__MACOSX/
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+
+# HW1
+covid.train.csv
+covid.test.csv
+pred.csv
+models/
+runs/
+
+# 数据集/模型权重/预测输出/实验记录（体积大或个人笔记，不进仓库）
+**/libriphone/
+**/libriphone.zip
+**/*.ckpt
+**/*.pt
+**/prediction.csv
+**/experiment_log.txt
