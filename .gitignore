@@ -18,3 +18,9 @@ runs/
 **/*.pt
 **/prediction.csv
 **/experiment_log.txt
+
+food11/
+food11.zip
+*.ckpt
+*_log.txt
+*.csv
