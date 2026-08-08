@@ -1,24 +1,26 @@
 # HW3 Image Classification (Food-11)
 
+Food-11数据集11分类任务，使用CNN完成图像分类，练习方向为数据增强与模型架构设计（残差连接）。
+
 ## 一、实验记录
 
 | 序号 | 改动 | 结果(val best acc) | 说明 |
 |---|---|---|---|
-| 1 | Baseline，`Classifier`，无增强，`n_epochs=4` | 0.52505 | 接近simple baseline(0.501) |
-| 2 | +数据增强(Q1)，`n_epochs=4` | 0.53926 | 提升有限，epoch太短，增强的防过拟合作用还没体现 |
-| 3 | +训练更久，`n_epochs=80`，无正则化 | 0.73971（epoch69） | **严重过拟合**：epoch80时train acc=0.973，val回落到0.713，train/val差距~23-26个点 |
-| 4 | +Dropout(0.3)，`n_epochs=20`（未跑完） | 0.68368（末轮仍在涨） | 差距收窄到~5个点，方向正确但未收敛 |
-| 5 | Dropout→0.45 + weight_decay(5e-4) + LR Scheduler，`n_epochs=40` | 0.74522（epoch39） | 较3基本持平，差距回升到~11个点，末轮仍在刷新，训练还不充分 |
-| 6 | 5 + 增强强化 + Normalize + Label Smoothing(0.1)，`n_epochs=70` | **0.78352**（epoch65） | **本次最优**，超过medium baseline(0.732)；曲线后期平稳，非持续恶化的过拟合 |
-| 7 | Q2 `Residual_Network`，初版直接拍平接fc | 训练卡死，acc~0.145 | fc第一层6700万参数过大，训练信号被稀释，非代码错误 |
-| 8 | 7改用Global Average Pooling，套用6的配置 | 0.68336（epoch39，触发早停） | 低于`Classifier`约10个点，推测超参数未针对新架构重调 |
+| 1 | Baseline，`Classifier`，无数据增强，`n_epochs=4` | 0.52505 | 接近simple baseline(0.501) |
+| 2 | 加入数据增强（Q1），`n_epochs=4` | 0.53926 | 提升幅度有限，训练轮数过短，增强对过拟合的抑制作用尚未体现 |
+| 3 | 延长训练至`n_epochs=80`，未加入正则化手段 | 0.73971（epoch69） | 出现明显过拟合：epoch80时train acc=0.973，val acc回落至0.713，train/val差距约23-26个百分点 |
+| 4 | 在全连接层加入Dropout(p=0.3)，`n_epochs=20`（未训练至收敛） | 0.68368（最后一轮仍在刷新最佳） | train/val差距收窄至约5个百分点，方向正确，但因未训练完整，最终水平尚不明确 |
+| 5 | Dropout提高至0.45，weight_decay由1e-5提高至5e-4，加入CosineAnnealingLR学习率调度，`n_epochs=40` | 0.74522（epoch39） | 较实验3结果基本持平，train/val差距回升至约11个百分点，且最后一轮仍在刷新最佳，说明该配置训练尚不充分 |
+| 6 | 在实验5基础上，加大数据增强强度、加入Normalize、加入Label Smoothing(0.1)，`n_epochs=70` | **0.78352**（epoch65） | 本次实验中的最优结果，超过medium baseline(0.732)；训练后期曲线趋于平稳，判断为模型已收敛至稳定水平，而非持续恶化的过拟合 |
+| 7 | 完成Q2 `Residual_Network`，初始版本将卷积输出展平后直接接入全连接层 | 训练未能正常进行，val acc停滞于约0.145 | 定位为全连接层输入维度过大（约6700万参数），导致训练信号被稀释、模型难以更新，非实现逻辑错误 |
+| 8 | 将实验7的展平操作替换为全局平均池化（Global Average Pooling），沿用实验6的训练配置 | 0.68336（epoch39，触发早停） | 低于`Classifier`架构约10个百分点，推测原因是超参数直接沿用`Classifier`的调优结果，未针对新架构重新调整 |
 
-**最终采用**：`Classifier` + 增强 + Normalize + Dropout(0.45) + weight_decay(5e-4) + CosineAnnealingLR + Label Smoothing(0.1)，**val best acc = 0.78352**
+**最终采用配置**：`Classifier` + 数据增强 + Normalize + Dropout(0.45) + weight_decay(5e-4) + CosineAnnealingLR + Label Smoothing(0.1)，val best acc = 0.78352
 
 ## 二、结论
 
-- 数据增强需要足够训练轮数才能体现价值，短训练下可能只看到"代价"（收敛变慢）看不到"收益"
-- train/val差距是否**持续扩大**，比某一轮的绝对差距数值更能反映过拟合是否仍在恶化
-- Dropout、weight_decay、增强强度、Label Smoothing、Normalize都有正向贡献，但都不是单独解决过拟合的"万能解"，需要组合、且力度要匹配训练轮数
-- fc层拍平前的特征图维度直接决定参数量与训练启动速度，Global Average Pooling能有效控制这个瓶颈
-- 模型架构升级不保证提升——沿用别的架构调好的超参数、未重新调优，效果可能反而更差，架构和超参数要一起调
+1. 数据增强的效果需要在足够长的训练过程中才能体现，训练轮数不足时，可能只观察到增强带来的收敛延迟，而观察不到其抑制过拟合的收益。
+2. 判断过拟合是否仍在恶化，train/val准确率差距是否持续扩大，比某一轮的绝对差距数值更具参考价值。
+3. Dropout、weight_decay、数据增强强度、Label Smoothing、Normalize均对最终结果有正向贡献，但均非单独可解决过拟合问题的手段，需要组合使用，且力度需与训练轮数相匹配。
+4. 全连接层输入维度（即卷积输出展平前的特征图大小）直接决定该层参数量，进而影响训练启动速度与过拟合风险；采用全局平均池化替代直接展平，可有效控制这一问题。
+5. 模型架构的调整不必然带来性能提升。若直接沿用其他架构已调优的超参数、未针对新架构重新调整，实际效果可能反而更差，说明架构与超参数需要联合调整，而非独立处理的变量。
